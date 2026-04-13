@@ -1,9 +1,8 @@
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
-import java.util.Optional;
 
 public class CacheTest {
-    private Memory m;
 
     @Test
     public void sumNumbers() {
@@ -18,95 +17,84 @@ public class CacheTest {
                 "blt -1", //7
                 "syscall 0"
         };
-        Processor p = runProgram(program, Optional.empty());
-        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,1,0,1,1,1,0,1,0,", p.output.getFirst());
+        Processor p = runProgram(program);
+        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,1,0,1,1,1,0,1,0, (5050)", p.output.getFirst() + " (" + Integer.parseInt(p.output.getFirst().substring(3,p.output.getFirst().length()-1).replaceAll(",",""), 2)+ ")");
     }
 
     @Test
     public void sumArray() {
-        m = new Memory();
-        for(int i = 0; i < 100; i++) {
-            Word32 value = new Word32();
-            Word32 index = new Word32();
-            TestConverter.fromInt(i+200, index);
-            TestConverter.fromInt(1, value);
-            m.address = index;
-            m.value = value;
-            m.write();
-        }
         String[] program = {
+                "copy 10 r5",
+                "multiply r5 r5",
+                "multiply 3 r5",
+                "copy 10 r6",
+                "multiply r6 r6",
+                "multiply 2 r6",
+                "store 1 r6", //6
+                "add 1 r6",
+                "compare r6 r5",
+                "blt -1", //9
+
                 "copy 10 r2",
                 "copy 0 r0",
                 "multiply r2 r2",
                 "multiply 2 r2",
                 "copy 10 r3",
                 "multiply r3 r3",
-                "load r2 r1", //6
+                "load r2 r1", //16
                 "add r1 r0",
                 "add 1 r4",
                 "compare r4 r3",
-                "blt -2",
+                "blt -2", //20
                 "syscall 0"
         };
-        Processor p = runProgram(program, Optional.of(m));
-        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,", p.output.getFirst());
+        Processor p = runProgram(program);
+        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0, (100)", p.output.getFirst() + " (" + Integer.parseInt(p.output.getFirst().substring(3,p.output.getFirst().length()-1).replaceAll(",",""), 2)+ ")");
     }
 
     @Test
     public void sumLinkedList() {
-        m = new Memory();
-        for(int i = 300; i < 800; i += 5) {
-            Word32 value = new Word32();
-            Word32 index = new Word32();
-            TestConverter.fromInt(i, index);
-            TestConverter.fromInt(1, value);
-            m.address = index;
-            m.value = value;
-            m.write();
-            Word32 linkIndex =  new Word32();
-            Word32 one = new  Word32();
-            TestConverter.fromInt(1, one);
-            Adder.add(index, one, linkIndex);
-            Word32 linkAddress =  new  Word32();
-            if(i == 795) {
-                TestConverter.fromInt(0, linkAddress);
-
-            } else {
-                TestConverter.fromInt(i+5, linkAddress);
-            }
-            m.address = linkIndex;
-            m.value = linkAddress;
-            m.write();
-        }
         String[] program = {
+                "copy 10 r4",
+                "multiply r4 r4",
+                "multiply 3 r4",
+                "copy 10 r5",
+                "multiply r5 r5",
+                "multiply 8 r5",
+                "store 1 r4", //6
+                "copy r4 r6",
+                "add 1 r4",
+                "add 5 r6",
+                "store r6 r4",
+                "add 4 r4",
+                "compare r4 r5",
+                "blt -3", //13
+                "subtract 4 r4",
+                "store 0 r4",
+
                 "copy 10 r3",
                 "copy 0 r0",
                 "multiply r3 r3",
                 "multiply 3 r3",
-                "load r3 r2",//4
+                "load r3 r2",//20
                 "add r2 r0",
                 "add 1 r3",
                 "load r3 r3",
                 "compare 0 r3",
-                "bne -2",//9
+                "bne -2",//25
                 "syscall 0"
         };
-        Processor p = runProgram(program, Optional.of(m));
-        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,", p.output.getFirst());
+        Processor p = runProgram(program);
+        Assertions.assertEquals("r0:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0, (100)", p.output.getFirst() + " (" + Integer.parseInt(p.output.getFirst().substring(3,p.output.getFirst().length()-1).replaceAll(",",""), 2)+ ")");
     }
 
-    private static Processor runProgram(String[] program, Optional<Memory> m) {
+    private static Processor runProgram(String[] program) {
         var assembled = Assembler.assemble(program);
         var merged = Assembler.finalOutput(assembled);
         Processor p;
-        if(!m.isPresent()) {
-            Memory mem = new Memory();
-            mem.load(merged);
-            p = new Processor(mem);
-        } else {
-            m.get().load(merged);
-            p = new Processor(m.get());
-        }
+        Memory mem = new Memory();
+        mem.load(merged);
+        p = new Processor(mem);
         p.run();
         return p;
     }

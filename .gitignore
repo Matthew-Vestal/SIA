@@ -3,8 +3,8 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 .idea/
-SIA.iml/
-Skeleton.iml/
+SIA.iml
+Skeleton.iml
 
 ### Eclipse ###
 .apt_generated
