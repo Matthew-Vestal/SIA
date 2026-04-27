@@ -20,9 +20,13 @@ public class Processor {
     private Word32 immediate = new Word32();
     private int destinationIndex;
     private int currentClockCycle = 0;
+    private InstructionCache cache;
+    private L2Cache l2Cache;
 
     public Processor(Memory m) {
         mem = m;
+        l2Cache = new L2Cache(m);
+        cache = new InstructionCache(m, l2Cache);
         for(int i = 0; i < 32; i++) {
             registers[i] = new Word32();
         }
@@ -42,8 +46,7 @@ public class Processor {
         if(pc % 2 == 0) {
             int wordAddress = pc / 2;
             TestConverter.fromInt(wordAddress, mem.address);
-            mem.read();
-            currentClockCycle += 300;
+            currentClockCycle += cache.read();
             mem.value.copy(currentWord);
             currentWord.getTopHalf(instructionOne);
             currentWord.getBottomHalf(instructionTwo);
@@ -160,8 +163,7 @@ public class Processor {
                 } else {
                     op1.copy(mem.address);
                 }
-                mem.read();
-                currentClockCycle += 300;
+                currentClockCycle += l2Cache.readForLoad();
                 mem.value.copy(alu.result);
                 break;
             case 19:
@@ -171,8 +173,7 @@ public class Processor {
                 } else {
                     op1.copy(mem.value);
                 }
-                mem.write();
-                currentClockCycle += 300;
+                currentClockCycle += l2Cache.write();
                 break;
             case 20:
                 if(type.getValue()) {

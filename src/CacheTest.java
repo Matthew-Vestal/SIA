@@ -26,6 +26,8 @@ public class CacheTest {
     @Test
     public void sumArray() {
         String[] program = {
+                "copy 0 r0",
+                "copy 0 r0", //Aligning the block so it caches properly
                 "copy 10 r5",
                 "multiply r5 r5",
                 "multiply 3 r5", //r5 = 300 (last address for array)
